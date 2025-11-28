@@ -1,0 +1,116 @@
+import pandas as pd
+
+# -------------------------------------------------------------------
+# DATAFRAME PRINCIPAL (pode ser carregado de um arquivo, se existir)
+# -------------------------------------------------------------------
+try:
+    pessoas_df = pd.read_csv("pessoas.csv")
+except FileNotFoundError:
+    pessoas_df = pd.DataFrame(columns=[
+        "id",
+        "nome",
+        "email",
+        "telefone",
+        "data_cadastro",
+        "ativo"
+    ])
+
+# -------------------------------------------------------------------
+# FUNÇÃO PARA GERAR ID AUTOMÁTICO
+# -------------------------------------------------------------------
+def gerar_id(df):
+    if df.empty:
+        return 1
+    return df["id"].max() + 1
+
+# -------------------------------------------------------------------
+# CADASTRAR PESSOA
+# -------------------------------------------------------------------
+def cadastrar_pessoa(nome, email, telefone, data_cadastro):
+    global pessoas_df
+
+    novo_id = gerar_id(pessoas_df)
+
+    nova_pessoa = pd.DataFrame([{
+        "id": novo_id,
+        "nome": nome,
+        "email": email,
+        "telefone": telefone,
+        "data_cadastro": data_cadastro,
+        "ativo": True
+    }])
+
+    pessoas_df = pd.concat([pessoas_df, nova_pessoa], ignore_index=True)
+    salvar()
+
+    return novo_id
+
+# -------------------------------------------------------------------
+# ATUALIZAR DADOS
+# -------------------------------------------------------------------
+def atualizar_pessoa(id_pessoa, **novos_dados):
+    global pessoas_df
+
+    if id_pessoa not in pessoas_df["id"].values:
+        return "Pessoa não encontrada."
+
+    for coluna, valor in novos_dados.items():
+        if coluna in pessoas_df.columns:
+            pessoas_df.loc[pessoas_df["id"] == id_pessoa, coluna] = valor
+
+    salvar()
+    return "Dados atualizados com sucesso."
+
+# -------------------------------------------------------------------
+# DESATIVAR/EXCLUIR PESSOA (não remove físico para manter histórico)
+# -------------------------------------------------------------------
+def desativar_pessoa(id_pessoa):
+    global pessoas_df
+
+    if id_pessoa not in pessoas_df["id"].values:
+        return "Pessoa não encontrada."
+
+    pessoas_df.loc[pessoas_df["id"] == id_pessoa, "ativo"] = False
+    salvar()
+    return "Pessoa desativada."
+
+# -------------------------------------------------------------------
+# BUSCAR PESSOA
+# -------------------------------------------------------------------
+def buscar_pessoa(nome=None, id_pessoa=None):
+    if id_pessoa is not None:
+        return pessoas_df[pessoas_df["id"] == id_pessoa]
+
+    if nome is not None:
+        return pessoas_df[pessoas_df["nome"].str.contains(nome, case=False, na=False)]
+
+    return None
+
+# -------------------------------------------------------------------
+# SALVAR EM CSV PARA PERSISTÊNCIA
+# -------------------------------------------------------------------
+def salvar():
+    pessoas_df.to_csv("pessoas.csv", index=False)
+
+# -------------------------------------------------------------------
+# EXEMPLO DE USO
+# -------------------------------------------------------------------
+if __name__ == "__main__":
+    # Cadastro simples
+    id_gerado = cadastrar_pessoa(
+        nome="Igor Cury",
+        email="igor@example.com",
+        telefone="(31) 99999-0000",
+        data_cadastro="2025-11-28"
+    )
+
+    print("Novo cadastro ID:", id_gerado)
+
+    # Buscar
+    print(buscar_pessoa(id_pessoa=id_gerado))
+
+    # Atualizar
+    atualizar_pessoa(id_gerado, telefone="(31) 98888-0000")
+
+    # Desativar
+    desativar_pessoa(id_gerado)
